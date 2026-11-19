@@ -1,0 +1,68 @@
+# Publica o site (frontend) no Cloudflare Pages a cada push na main que mexa no frontend.
+# O back-end (Render) é publicado pelo próprio Render (Auto-Deploy "On Commit").
+# Configure em Settings > Secrets and variables > Actions:
+#   CLOUDFLARE_API_TOKEN   = token com permissão "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID  = id da conta Cloudflare (wrangler whoami)
+name: Deploy do site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      # Projeto do Cloudflare e endereço do back-end vêm de academias/<id>/academia.json
+      - name: Lê a configuração da academia
+        id: academia
+        env:
+          ACADEMIA: exemplo
+        run: |
+          node --input-type=module -e "
+            import { carregarAcademia } from './academia.plugin.js'
+            const a = carregarAcademia()
+            if (!a.apiUrl || !a.cloudflareProjeto) throw new Error('academia.json sem apiUrl ou cloudflareProjeto')
+            console.log('api=' + a.apiUrl)
+            console.log('projeto=' + a.cloudflareProjeto)
+          " >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          ACADEMIA: exemplo
+          # Endereço do back-end embutido no site. Sem ele o site aponta para localhost.
+          VITE_API_URL: ${{ steps.academia.outputs.api }}
+        run: npm run build
+
+      - name: Confere o endereço do back-end no build
+        run: grep -rq "${{ steps.academia.outputs.api }}" dist/assets
+
+      - name: Publica no Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy dist --project-name ${{ steps.academia.outputs.projeto }} --branch main --commit-dirty=true

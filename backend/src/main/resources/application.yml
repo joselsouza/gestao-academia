@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: gestao-academia
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    # Banco Postgres (Neon). Use o endereço direto (sem "-pooler" no host), em formato JDBC:
+    #   DB_URL=jdbc:postgresql://<host>/<banco>?sslmode=require&channelBinding=require
+    # Os nomes antigos (SUPABASE_DB_*) ainda são aceitos como alternativa.
+    url: ${DB_URL:${SUPABASE_DB_URL:}}
+    username: ${DB_USER:${SUPABASE_DB_USER:}}
+    password: ${DB_PASSWORD:${SUPABASE_DB_PASSWORD:}}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: America/Sao_Paulo
+  flyway:
+    enabled: true
+    # O Supabase já cria objetos no schema public (ex.: função rls_auto_enable), então o
+    # Flyway o vê como "não vazio". Baseline na versão 0 garante que a V1 seja EXECUTADA.
+    baseline-on-migrate: true
+    baseline-version: 0
+  servlet:
+    multipart:
+      max-file-size: 10MB
+  jackson:
+    time-zone: America/Sao_Paulo
+    deserialization:
+      # campos primitivos ausentes no JSON viram 0/false em vez de erro
+      fail-on-null-for-primitives: false
+
+server:
+  port: ${PORT:8080}
+  # Compacta as respostas JSON (gzip) — menos dados trafegando até o navegador
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 1024
+
+app:
+  timezone: America/Sao_Paulo
+  academia:
+    # Nome usado nos textos enviados ao aluno (ex.: descrição padrão das cobranças do Asaas).
+    nome: ${APP_ACADEMIA_NOME:Academia Exemplo}
+  cors-origins: ${APP_CORS_ORIGINS:http://localhost:5173}
+  jwt:
+    # Obrigatório (mín. 32 caracteres). Gere com: openssl rand -base64 48
+    secret: ${APP_JWT_SECRET:}
+    expiration-hours: 12
+  portal-aluno:
+    # Senha inicial de todos os alunos no portal (login = CPF). Cada aluno pode trocar a sua.
+    senha-padrao: ${APP_ALUNO_SENHA_PADRAO:123456}
+  admin:
+    # Criado na primeira subida se ainda não existir usuário com este e-mail.
+    # A senha vem SÓ de variável de ambiente (o repositório é público).
+    nome: ${APP_ADMIN_NOME:Administrador}
+    email: ${APP_ADMIN_EMAIL:admin@exemplo.com}
+    password: ${APP_ADMIN_PASSWORD:}
+  reconhecimento:
+    # Distância euclidiana máxima entre vetores faciais para considerar "mesma pessoa"
+    # (0.6 é o padrão do face-api; 0.5 é mais rígido e evita falsos positivos)
+    distancia-maxima: 0.5
+  keep-alive:
+    cron: "0 0 9 * * *"   # todo dia às 09:00
+  financeiro:
+    cron-gerar-mensalidades: "0 0 6 1 * *"  # dia 1 de cada mês às 06:00
+    dia-vencimento: 10                       # todas as mensalidades vencem no dia 10
+    # Primeiro mês cobrado (yyyy-MM): meses anteriores não geram mensalidade. Vazio = sem limite.
+    inicio-cobranca: ${APP_FINANCEIRO_INICIO_COBRANCA:2026-12}
+  asaas:
+    # Chave de API: Asaas > Integrações > Chave de API (começa com $aact_). Só por variável de ambiente.
+    api-key: ${ASAAS_API_KEY:}
+    # Sandbox para testes; em produção use https://api.asaas.com/v3
+    base-url: ${ASAAS_BASE_URL:https://api-sandbox.asaas.com/v3}
+    # Token que o Asaas envia no cabeçalho "asaas-access-token" do webhook
+    webhook-token: ${ASAAS_WEBHOOK_TOKEN:}
+    cron-sincronizar: "0 0 7 * * *"  # confere a situação das cobranças todo dia às 07:00

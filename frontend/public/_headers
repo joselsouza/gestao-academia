@@ -1,0 +1,13 @@
+# Cloudflare Pages: cache longo para arquivos que não mudam.
+# Os modelos de reconhecimento facial (~7 MB) ficam guardados no celular por 1 ano.
+# Se algum modelo for trocado no futuro, mude também o nome do arquivo.
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Arquivos do build já têm um "hash" no nome (mudam de nome a cada versão)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker das notificações: sempre a versão mais nova
+/sw.js
+  Cache-Control: no-cache
