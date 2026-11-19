@@ -59,8 +59,7 @@ publica. Assim o site nunca sai apontando para `localhost`.
    o `academia.json`.
 2. **Banco:** crie um projeto novo no Supabase. As tabelas são criadas sozinhas na primeira
    subida do back-end (Flyway).
-3. **Back-end:** crie um serviço novo no Render a partir deste repositório, com as variáveis
-   (modelo em `backend/.env.example`):
+3. **Back-end:** crie um serviço novo no Render a partir deste repositório, com as variáveis:
    - `SUPABASE_DB_URL`, `SUPABASE_DB_USER`, `SUPABASE_DB_PASSWORD`: banco desta academia
    - `APP_JWT_SECRET`: um segredo novo (`openssl rand -base64 48`), nunca o de outra academia
    - `APP_ACADEMIA_NOME`: nome usado nas cobranças do Asaas
